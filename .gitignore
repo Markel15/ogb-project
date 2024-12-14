@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.bak
+*.swp
+# Configuración de VS Code
+.vscode/
+# Archivos de logs
+*.log
+# Archivos temporales
+*.bak
+*.tmp
+*.swp
