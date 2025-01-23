@@ -18,7 +18,7 @@ for data in dataset:
 # Convertir la lista de etiquetas a un array de numpy
 labels = np.array(labels)
 
-# Calcular la distribución de clases (por ejemplo, frecuencia de cada clase)
+# Calcular la distribución de clases
 unique, counts = np.unique(labels, return_counts=True)
 
 # Imprimir la distribución
