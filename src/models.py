@@ -11,7 +11,7 @@ class GCN(torch.nn.Module):
         self.drop_ratio = drop_ratio
         self.num_capas = num_capas
         # Crear una lista de capas GraphConvolution
-        self.capas = torch.nn.ModuleList
+        self.capas = torch.nn.ModuleList()
         for capa in range(num_capas):
             self.capas.append(GraphConvolution(dim_repr_nodo, metodo_agregacion))
         # A continuación definimos la capa de salida que será alimentada con el pooling del grafo completo y determinará la clasificación por cada instancia
