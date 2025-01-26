@@ -21,11 +21,12 @@ class GCN(torch.nn.Module):
         # Propagación a través de todas las capas convolucionales
         num_capa=0
         for capa in self.capas:
-            if num_capa == self.capas - 1:  # si es la ultima capa no se añade función lineal
+            if num_capa == self.num_capas- 1:  # si es la ultima capa no se añade función lineal
                 x = capa(x, edge_index, edge_attr) # Obtener representaciones actualizadas
             else:
                 x = capa(x, edge_index, edge_attr) # Obtener representaciones actualizadas
                 x = F.relu(x)  # Activación no lineal (en este caso ReLu)
+            num_capa = num_capa + 1
         # Transformando readout
         if(self.graph_pooling == "sum"):
             self.pooling = global_add_pool
