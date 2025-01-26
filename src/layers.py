@@ -5,7 +5,7 @@ from torch_geometric.nn.conv import MessagePassing
 class GraphConvolution(MessagePassing): 
     #Al heredar de MessagePassing hay que definir los metodos de forward, message y update como mínimo
 
-    def __init__(self, dim_repr_nodo,metodo_agregacion):
+    def __init__(self, dim_repr_nodo, metodo_agregacion):
         super(GraphConvolution, self).__init__(aggr=metodo_agregacion) # Por defecto la agregación se hace con add (se puede cambiar)
 
         # Definir las representaciones a aprender en el proceso de MessagePassing
@@ -38,8 +38,9 @@ class GraphConvolution(MessagePassing):
         # No veo necesario el Paso 6 ya que gestiona automaticamente el bias (no se ha indicado False al usar Linear)
     
     def message(self, x_j, edge_attr, norm):
-        return norm.view * (x_j + edge_attr)
+        return norm.view(-1, 1) * (x_j + edge_attr)
 
-    # No hay que definir update porque no vamos a cambiarla (nos sirve la definición actual heredada)
+    def update(self, representacion): # No hay que cambiar update nos serviría la versión heredada
+        return representacion
         
     
