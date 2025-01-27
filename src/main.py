@@ -5,6 +5,9 @@ import torch.optim as optim
 from models import GCN
 from ogb.graphproppred import PygGraphPropPredDataset, Evaluator
 
+def train(model, train_loader, optimizer, criterion, device):
+    model.train() # metodo heredado
+
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     dataset = PygGraphPropPredDataset(name = 'ogbg-ppa')
