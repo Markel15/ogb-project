@@ -5,8 +5,18 @@ import torch.optim as optim
 from models import GCN
 from ogb.graphproppred import PygGraphPropPredDataset, Evaluator
 
-def train(model, train_loader, optimizer, criterion, device):
-    model.train() # metodo heredado
+def train(model, train_loader, optimizador, criterio, device):
+    model.train() # metodo heredado de torch.nn.Module, pone el modelo en modo entrenamiento(dropout y más)
+    total_loss = 0
+    for data in train_loader:
+        data = data.to(device)
+        optimizador.zero_grad() # Antes de realizar una actualización de los pesos del modelo, es necesario poner a cero los gradientes acumulados de la iteración anterior
+        pred = model(data.batch)
+        loss = criterio(pred, data.y)
+        loss.backward() # El método backward() calcula los gradientes de la pérdida respecto a los parámetros del modelo
+        optimizador.step() # Actualiza los pesos del modelo de acuerdo con los gradientes calculados durante la fase anterior (con el loss.backward())
+        total_loss += loss.item()
+    return total_loss / len(train_loader)
 
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
