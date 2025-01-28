@@ -11,7 +11,7 @@ def train(model, train_loader, optimizador, criterio, device):
     for data in train_loader:
         data = data.to(device)
         optimizador.zero_grad() # Antes de realizar una actualización de los pesos del modelo, es necesario poner a cero los gradientes acumulados de la iteración anterior
-        pred = model(data.batch)
+        pred = model(data.x, data.edge_index, data.edge_attr, data.batch) # Llamada implicita al metodo forward del modelo con todo lo necesario (características de los nodos, aristas y batch)
         loss = criterio(pred, data.y)
         loss.backward() # El método backward() calcula los gradientes de la pérdida respecto a los parámetros del modelo
         optimizador.step() # Actualiza los pesos del modelo de acuerdo con los gradientes calculados durante la fase anterior (con el loss.backward())
