@@ -14,12 +14,15 @@ class GCN(torch.nn.Module):
         self.capas = torch.nn.ModuleList()
         for capa in range(num_capas):
             self.capas.append(GraphConvolution(dim_repr_nodo, metodo_agregacion))
+        self.node_encoder = torch.nn.Embedding(1, dim_repr_nodo) # Codificador para transformar las dimensiones de los nodos
         # A continuación definimos la capa de salida que será alimentada con el pooling del grafo completo y determinará la clasificación por cada instancia
         self.perceptron = torch.nn.Linear(dim_repr_nodo, num_clases)
 
     def forward(self, x, edge_index, edge_attr, batch):
         # Propagación a través de todas las capas convolucionales
         num_capa=0
+        # x es un tensor que tiene las características de todos los nodos de todos los grafos en el batch
+        x = self.node_encoder(x) # Transformará cada representación de los nodos a (num_nodes, dim_repr_nodo). Esto permite poder usar los "embeddings" de cada nodo en el proceso de MessagePassing al conseguir una matriz compatible con la multiplicación definida en la capa convolucional para la representación de cada nodo.
         for capa in self.capas:
             if num_capa == self.num_capas- 1:  # si es la ultima capa no se añade función lineal
                 x = capa(x, edge_index, edge_attr) # Obtener representaciones actualizadas
