@@ -31,9 +31,13 @@ def evaluate(model, loader, evaluator, device):
     y_pred = torch.cat(y_pred, dim=0)
     return evaluator.eval({'y_true': y_true, 'y_pred': y_pred})
 
+def inicializar_x(data): 
+    data.x = torch.zeros(data.num_nodes, dtype=torch.long) # El dataset no cuenta con representaciones iniciales de los nodos, así que se inicializan a 0 y se irán actualizando con el pase de mensajes
+    return data
+
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    dataset = PygGraphPropPredDataset(name = 'ogbg-ppa')
+    dataset = PygGraphPropPredDataset(name = 'ogbg-ppa', transform = inicializar_x)
     
     print(f'Usando el dispositivo: {device}')
     print(torch.cuda.get_device_name(0))
@@ -52,6 +56,24 @@ def main():
     # Configuración de optimizador y criterio de pérdida
     optimizador = optim.Adam(model.parameters(), lr=0.001) # Se puede poner como variable el learning rate
     criterio = torch.nn.BCEWithLogitsLoss()
+
+    # Entrenamiento y evaluación
+    best_valid_score = 0
+    for epoch in range(1, 101):  # Nº epochs fijado a 100 pero se puede cambiar
+        loss = train(model, train_loader, optimizador, criterio, device)
+        print(f'Epoca {epoch}, Pérdida de entrenamiento: {loss:.4f}')
+
+        # Evaluación en conjunto de validación
+        valid_result = evaluate(model, valid_loader, evaluator, device)
+        print(f'Epoca {epoch}, Resultado de validación: {valid_result}')
+
+        if valid_result['accuracy'] > best_valid_score:
+            best_valid_score = valid_result['accuracy']
+            print(f'Nuevos mejores resultados en validación (accuracy): {best_valid_score:.4f}')
+
+        # Evaluación final en el conjunto de prueba
+        test_result = evaluate(model, test_loader, evaluator, device)
+        print(f'Resultados finales en test: {test_result}')
 
 
 if __name__ == "__main__":
