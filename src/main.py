@@ -18,6 +18,19 @@ def train(model, train_loader, optimizador, criterio, device):
         total_loss += loss.item()
     return total_loss / len(train_loader)
 
+def evaluate(model, loader, evaluator, device):
+    model.eval() # Iniciar modo de evaluación 
+    y_true, y_pred = [], [] # Inicializar listas vacias con las etiquetas correctas y las predicas.
+    for data in loader:
+        data = data.to(device)
+        with torch.no_grad(): # Utilizado para no calcular los gradientes ya que como aparece en la documentacion no es necesario en la inferencia puesto que no estamos entrenando nada y libera memoria
+            pred = model(data.x, data.edge_index, data.edge_attr, data.batch) # Obtener predicción
+        y_true.append(data.y.cpu()) # Actualizar las listas y mover los datos a la cpu por conveniencia para liberar memoria y posteriores posibles calculos
+        y_pred.append(pred.cpu())
+    y_true = torch.cat(y_true, dim=0) # Concatenar los elementos en un único tensor
+    y_pred = torch.cat(y_pred, dim=0)
+    return evaluator.eval({'y_true': y_true, 'y_pred': y_pred})
+
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     dataset = PygGraphPropPredDataset(name = 'ogbg-ppa')
