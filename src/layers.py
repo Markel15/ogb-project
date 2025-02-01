@@ -20,7 +20,8 @@ class GraphConvolution(MessagePassing):
         # edge_attr (list: #edges x #edge-features): for the aforementioned edges, contains their features
 
         # Paso 1: Añadir "self-loops" a la matriz de adyacencia
-        edge_index, _ = add_self_loops(edge_index, num_nodes=input.size(0))
+        # edge_index, _ = add_self_loops(edge_index, num_nodes=input.size(0))
+        edge_index, edge_attr = add_self_loops(edge_index, edge_attr=edge_attr,num_nodes=input.size(0)) # Al añadir los nodos propios a las matrices de adyacencia, implicitamente incluimos nuevas aristas por eso debemos añadir esas nuevas características como información a aprender en el paso de mensajes
         
         # Paso 2: Transformaciones lineales
         input = self.node_transformer(input)
