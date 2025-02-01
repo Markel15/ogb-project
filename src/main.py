@@ -12,7 +12,7 @@ def train(model, train_loader, optimizador, criterio, device):
         data = data.to(device)
         optimizador.zero_grad() # Antes de realizar una actualización de los pesos del modelo, es necesario poner a cero los gradientes acumulados de la iteración anterior
         pred = model(data.x, data.edge_index, data.edge_attr, data.batch) # Llamada implicita al metodo forward del modelo con todo lo necesario (características de los nodos, aristas y batch)
-        loss = criterio(pred, data.y)
+        loss = criterio(pred, data.y.view(-1)) # Conseguir un unico vector con las etiquetas de todas las predicciones del batch
         loss.backward() # El método backward() calcula los gradientes de la pérdida respecto a los parámetros del modelo
         optimizador.step() # Actualiza los pesos del modelo de acuerdo con los gradientes calculados durante la fase anterior (con el loss.backward())
         total_loss += loss.item()
@@ -55,7 +55,7 @@ def main():
 
     # Configuración de optimizador y criterio de pérdida
     optimizador = optim.Adam(model.parameters(), lr=0.001) # Se puede poner como variable el learning rate
-    criterio = torch.nn.BCEWithLogitsLoss()
+    criterio = torch.nn.CrossEntropyLoss() # CrossEntropyLoss es para clasificación multiclase
 
     # Entrenamiento y evaluación
     best_valid_score = 0
