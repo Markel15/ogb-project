@@ -1,6 +1,7 @@
 import torch
 from torch_geometric.loader import DataLoader
 import torch.optim as optim
+from tqdm import tqdm # Para barra de carga (conocer tiempo previsto de cada proceso)
 
 from models import GCN
 from ogb.graphproppred import PygGraphPropPredDataset, Evaluator
@@ -8,7 +9,7 @@ from ogb.graphproppred import PygGraphPropPredDataset, Evaluator
 def train(model, train_loader, optimizador, criterio, device):
     model.train() # metodo heredado de torch.nn.Module, pone el modelo en modo entrenamiento(dropout y más)
     total_loss = 0
-    for data in train_loader:
+    for data in tqdm(train_loader, desc="Entrenando...", unit="batch"):
         data = data.to(device)
         optimizador.zero_grad() # Antes de realizar una actualización de los pesos del modelo, es necesario poner a cero los gradientes acumulados de la iteración anterior
         pred = model(data.x, data.edge_index, data.edge_attr, data.batch) # Llamada implicita al metodo forward del modelo con todo lo necesario (características de los nodos, aristas y batch)
@@ -21,7 +22,7 @@ def train(model, train_loader, optimizador, criterio, device):
 def evaluate(model, loader, evaluator, device):
     model.eval() # Iniciar modo de evaluación 
     y_true, y_pred = [], [] # Inicializar listas vacias con las etiquetas correctas y las predicas.
-    for data in loader:
+    for data in tqdm(loader, desc="Evaluando...", unit="batch"):
         data = data.to(device)
         with torch.no_grad(): # Utilizado para no calcular los gradientes ya que como aparece en la documentacion no es necesario en la inferencia puesto que no estamos entrenando nada y libera memoria
             pred = model(data.x, data.edge_index, data.edge_attr, data.batch) # Obtener predicción
