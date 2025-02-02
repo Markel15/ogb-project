@@ -27,7 +27,7 @@ def evaluate(model, loader, evaluator, device):
         with torch.no_grad(): # Utilizado para no calcular los gradientes ya que como aparece en la documentacion no es necesario en la inferencia puesto que no estamos entrenando nada y libera memoria
             pred = model(data.x, data.edge_index, data.edge_attr, data.batch) # Obtener predicción
         y_true.append(data.y.cpu()) # Actualizar las listas y mover los datos a la cpu por conveniencia para liberar memoria y posteriores posibles calculos
-        y_pred.append(pred.cpu())
+        y_pred.append(pred.argmax(dim=-1, keepdim=True).cpu())  # Aplicar argmax para obtener la clase predicha y poder comprobar con la correcta
     y_true = torch.cat(y_true, dim=0) # Concatenar los elementos en un único tensor
     y_pred = torch.cat(y_pred, dim=0)
     return evaluator.eval({'y_true': y_true, 'y_pred': y_pred})
@@ -68,8 +68,8 @@ def main():
         valid_result = evaluate(model, valid_loader, evaluator, device)
         print(f'Epoca {epoch}, Resultado de validación: {valid_result}')
 
-        if valid_result['accuracy'] > best_valid_score:
-            best_valid_score = valid_result['accuracy']
+        if valid_result['acc'] > best_valid_score:
+            best_valid_score = valid_result['acc']
             print(f'Nuevos mejores resultados en validación (accuracy): {best_valid_score:.4f}')
 
         # Evaluación final en el conjunto de prueba
