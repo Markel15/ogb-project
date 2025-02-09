@@ -47,7 +47,7 @@ def main():
     print(torch.cuda.get_device_name(0))
 
     split_idx = dataset.get_idx_split()
-    # split_idx = reducir_tamaño(dataset, split_idx, porcentaje=0.05)  # Para reducir el tamaño del dataset
+    #split_idx = reducir_tamaño(dataset, split_idx, porcentaje=0.1)
 
     # Utilizar el evaluador del paquete
     evaluator = Evaluator('ogbg-ppa')
@@ -55,7 +55,7 @@ def main():
     valid_loader = DataLoader(dataset[split_idx['valid']], batch_size = 32, shuffle=False)
     test_loader = DataLoader(dataset[split_idx['test']], batch_size = 32, shuffle=False)
 
-    model = GCN(num_clases=dataset.num_classes, num_capas=3, dim_repr_nodo=64, metodo_agregacion='add', drop_ratio=0.5, graph_pooling='mean')
+    model = GCN(num_clases=dataset.num_classes, num_capas=3, dim_repr_nodo=64, metodo_agregacion='add', drop_ratio=0.2, graph_pooling='mean')
     model = model.to(device)
 
     # Configuración de optimizador y criterio de pérdida
@@ -66,6 +66,9 @@ def main():
     accuracy_validation = []
     accuracy_test = []
     best_valid_score = 0
+    paciencia = 10  # Número máximo de épocas sin mejora
+    epochs_sin_mejora = 0
+    parar = False
     for epoch in range(1, 101):  # Nº epochs fijado a 100 pero se puede cambiar
         loss = train(model, train_loader, optimizador, criterio, device)
         print(f'Epoca {epoch}, Pérdida de entrenamiento: {loss:.4f}')
@@ -78,11 +81,17 @@ def main():
         if valid_result['acc'] > best_valid_score:
             best_valid_score = valid_result['acc']
             print(f'Nuevos mejores resultados en validación (accuracy): {best_valid_score:.4f}')
-
+            epochs_sin_mejora = 0
+        else:
+            epochs_sin_mejora += 1
+            if epochs_sin_mejora >= paciencia:
+                print(f"Early stopping activado en la época {epoch}. No hubo mejora en la validación durante {paciencia} épocas.")
+                parar=True; #Para que los gráficos coincidan en dimensiones usamos parar y no break
         # Evaluación final en el conjunto de prueba
         test_result = evaluate(model, test_loader, evaluator, device)
         accuracy_test.append(test_result['acc'])
         print(f'Resultados finales en test: {test_result}')
+        if (parar==True): break
     plot_learning_curve(accuracy_validation, accuracy_test)
 
 def plot_learning_curve(accuracy_validation, accuracy_test):
