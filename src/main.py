@@ -2,6 +2,9 @@ import torch
 from torch_geometric.loader import DataLoader
 import torch.optim as optim
 from tqdm import tqdm # Para barra de carga (conocer tiempo previsto de cada proceso)
+import matplotlib.pyplot as plt
+import os
+from datetime import datetime
 
 from models import GCN
 from ogb.graphproppred import PygGraphPropPredDataset, Evaluator
@@ -44,6 +47,7 @@ def main():
     print(torch.cuda.get_device_name(0))
 
     split_idx = dataset.get_idx_split()
+    # split_idx = reducir_tamaño(dataset, split_idx, porcentaje=0.05)  # Para reducir el tamaño del dataset
 
     # Utilizar el evaluador del paquete
     evaluator = Evaluator('ogbg-ppa')
@@ -55,10 +59,12 @@ def main():
     model = model.to(device)
 
     # Configuración de optimizador y criterio de pérdida
-    optimizador = optim.Adam(model.parameters(), lr=0.001) # Se puede poner como variable el learning rate
+    optimizador = optim.Adam(model.parameters(), lr=0.005) # Se puede poner como variable el learning rate
     criterio = torch.nn.CrossEntropyLoss() # CrossEntropyLoss es para clasificación multiclase
 
     # Entrenamiento y evaluación
+    accuracy_validation = []
+    accuracy_test = []
     best_valid_score = 0
     for epoch in range(1, 101):  # Nº epochs fijado a 100 pero se puede cambiar
         loss = train(model, train_loader, optimizador, criterio, device)
@@ -66,6 +72,7 @@ def main():
 
         # Evaluación en conjunto de validación
         valid_result = evaluate(model, valid_loader, evaluator, device)
+        accuracy_validation.append(valid_result['acc'])
         print(f'Epoca {epoch}, Resultado de validación: {valid_result}')
 
         if valid_result['acc'] > best_valid_score:
@@ -74,8 +81,48 @@ def main():
 
         # Evaluación final en el conjunto de prueba
         test_result = evaluate(model, test_loader, evaluator, device)
+        accuracy_test.append(test_result['acc'])
         print(f'Resultados finales en test: {test_result}')
+    plot_learning_curve(accuracy_validation, accuracy_test)
 
+def plot_learning_curve(accuracy_validation, accuracy_test):
+    epochs = range(1, len(accuracy_validation) + 1)
+
+    # Graficar la precisión de validación y prueba
+    plt.figure(figsize=(10, 5))
+    plt.plot(epochs, accuracy_validation, label='Precisión de validación', color='blue')
+    plt.plot(epochs, accuracy_test, label='Precisión de test', color='green')
+
+    # Etiquetas y título
+    plt.xlabel('Épocas')
+    plt.ylabel('Precisión')
+    plt.title('Curva de Precisión - Validación y Test')
+    plt.legend()
+    plt.grid(True)
+
+    hora_actual = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # Obtener hora para poder almacenar más de una imagen y no se sobreescriba 
+
+    # Guardar la gráfica
+    if not os.path.exists("img"):
+        os.makedirs("img") 
+    nombre_archivo = f'img/curvas_precision_{hora_actual}.png'
+    plt.savefig(nombre_archivo)
+    plt.show()
+
+def reducir_tamaño(dataset, split_idx, porcentaje=0.3):  # Funcion para reducir el tamaño del dataset a un porcentaje para poder hacer pruebas más rapidas
+    """
+    Reducir el tamaño del dataset a un porcentaje dado.
+    """
+    num_train = int(len(split_idx['train']) * porcentaje)
+    num_valid = int(len(split_idx['valid']) * porcentaje)
+    num_test = int(len(split_idx['test']) * porcentaje)
+
+    # Seleccionamos solo una fracción de los índices de cada conjunto
+    split_idx['train'] = split_idx['train'][:num_train]
+    split_idx['valid'] = split_idx['valid'][:num_valid]
+    split_idx['test'] = split_idx['test'][:num_test]
+
+    return split_idx
 
 if __name__ == "__main__":
     main()
