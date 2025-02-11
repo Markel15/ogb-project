@@ -1,3 +1,4 @@
+import re
 import torch
 from torch_geometric.loader import DataLoader
 import torch.optim as optim
@@ -5,9 +6,15 @@ from tqdm import tqdm # Para barra de carga (conocer tiempo previsto de cada pro
 import matplotlib.pyplot as plt
 import os
 from datetime import datetime
+from datetime import timedelta
 
 from models import GCN
 from ogb.graphproppred import PygGraphPropPredDataset, Evaluator
+
+LR=0.001
+DR=0.2
+NC=1
+ReprNodo=64
 
 def train(model, train_loader, optimizador, criterio, device):
     model.train() # metodo heredado de torch.nn.Module, pone el modelo en modo entrenamiento(dropout y más)
@@ -47,7 +54,7 @@ def main():
     print(torch.cuda.get_device_name(0))
 
     split_idx = dataset.get_idx_split()
-    #split_idx = reducir_tamaño(dataset, split_idx, porcentaje=0.1)
+    # split_idx = reducir_tamaño(split_idx, porcentaje=0.5)
 
     # Utilizar el evaluador del paquete
     evaluator = Evaluator('ogbg-ppa')
@@ -55,11 +62,11 @@ def main():
     valid_loader = DataLoader(dataset[split_idx['valid']], batch_size = 32, shuffle=False)
     test_loader = DataLoader(dataset[split_idx['test']], batch_size = 32, shuffle=False)
 
-    model = GCN(num_clases=dataset.num_classes, num_capas=3, dim_repr_nodo=64, metodo_agregacion='add', drop_ratio=0.2, graph_pooling='mean')
+    model = GCN(num_clases=dataset.num_classes, num_capas=NC, dim_repr_nodo=ReprNodo, metodo_agregacion='add', drop_ratio=DR, graph_pooling='mean')
     model = model.to(device)
 
     # Configuración de optimizador y criterio de pérdida
-    optimizador = optim.Adam(model.parameters(), lr=0.005) # Se puede poner como variable el learning rate
+    optimizador = optim.Adam(model.parameters(), lr=LR) # Se puede poner como variable el learning rate
     criterio = torch.nn.CrossEntropyLoss() # CrossEntropyLoss es para clasificación multiclase
 
     # Entrenamiento y evaluación
@@ -69,7 +76,8 @@ def main():
     paciencia = 10  # Número máximo de épocas sin mejora
     epochs_sin_mejora = 0
     parar = False
-    for epoch in range(1, 101):  # Nº epochs fijado a 100 pero se puede cambiar
+    start_time = datetime.now()
+    for epoch in range(1, 71):  # Nº epochs fijado a 100 pero se puede cambiar
         loss = train(model, train_loader, optimizador, criterio, device)
         print(f'Epoca {epoch}, Pérdida de entrenamiento: {loss:.4f}')
 
@@ -91,10 +99,14 @@ def main():
         test_result = evaluate(model, test_loader, evaluator, device)
         accuracy_test.append(test_result['acc'])
         print(f'Resultados finales en test: {test_result}')
+        last_test_score = test_result['acc']
+        loss_final = loss
         if (parar==True): break
-    plot_learning_curve(accuracy_validation, accuracy_test)
+    end_time = datetime.now()
+    tiempo_total = str(timedelta(seconds=(end_time - start_time).seconds))
+    plot_learning_curve(accuracy_validation, accuracy_test, last_test_score, best_valid_score, loss_final, tiempo_total)
 
-def plot_learning_curve(accuracy_validation, accuracy_test):
+def plot_learning_curve(accuracy_validation, accuracy_test, last_test_score, best_valid_score, loss_final, tiempo_total):
     epochs = range(1, len(accuracy_validation) + 1)
 
     # Graficar la precisión de validación y prueba
@@ -114,11 +126,13 @@ def plot_learning_curve(accuracy_validation, accuracy_test):
     # Guardar la gráfica
     if not os.path.exists("img"):
         os.makedirs("img") 
-    nombre_archivo = f'img/curvas_precision_{hora_actual}.png'
+    nombre_archivo = f'img/curvas_precision_{hora_actual}_lr{LR}_drop{DR}_layers{NC}_dim{ReprNodo}_maxtest{last_test_score:.3f}_maxval{best_valid_score:.4f}_loss{loss_final}_{tiempo_total}.png'
+    # Reemplazar los dos puntos ':' por un guion '-'
+    nombre_archivo = re.sub(r':', '-', nombre_archivo)
     plt.savefig(nombre_archivo)
     plt.show()
 
-def reducir_tamaño(dataset, split_idx, porcentaje=0.3):  # Funcion para reducir el tamaño del dataset a un porcentaje para poder hacer pruebas más rapidas
+def reducir_tamaño(split_idx, porcentaje=0.3):  # Funcion para reducir el tamaño del dataset a un porcentaje para poder hacer pruebas más rapidas
     """
     Reducir el tamaño del dataset a un porcentaje dado.
     """
