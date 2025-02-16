@@ -12,9 +12,9 @@ from models import GCN
 from ogb.graphproppred import PygGraphPropPredDataset, Evaluator
 
 LR=0.001
-DR=0.2
-NC=1
-ReprNodo=64
+DR=0.20
+NC=4
+ReprNodo=200
 
 def train(model, train_loader, optimizador, criterio, device):
     model.train() # metodo heredado de torch.nn.Module, pone el modelo en modo entrenamiento(dropout y más)
@@ -77,7 +77,7 @@ def main():
     epochs_sin_mejora = 0
     parar = False
     start_time = datetime.now()
-    for epoch in range(1, 71):  # Nº epochs fijado a 100 pero se puede cambiar
+    for epoch in range(1, 61):  # Nº epochs fijado a 100 pero se puede cambiar
         loss = train(model, train_loader, optimizador, criterio, device)
         print(f'Epoca {epoch}, Pérdida de entrenamiento: {loss:.4f}')
 

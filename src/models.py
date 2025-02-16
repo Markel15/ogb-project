@@ -25,10 +25,10 @@ class GCN(torch.nn.Module):
         x = self.node_encoder(x) # Transformará cada representación de los nodos a (num_nodes, dim_repr_nodo). Esto permite poder usar los "embeddings" de cada nodo en el proceso de MessagePassing al conseguir una matriz compatible con la multiplicación definida en la capa convolucional para la representación de cada nodo.
         for capa in self.capas:
             if num_capa == self.num_capas- 1:  # si es la ultima capa no se añade función lineal
-                x = capa(x, edge_index, edge_attr) # Obtener representaciones actualizadas
+                x =  F.dropout(capa(x, edge_index, edge_attr), p=self.drop_ratio, training=self.training) # Obtener representaciones actualizadas
             else:
                 x = capa(x, edge_index, edge_attr) # Obtener representaciones actualizadas
-                x = F.relu(x)  # Activación no lineal (en este caso ReLu)
+                x = F.dropout(F.relu(x), p=self.drop_ratio, training=self.training)  # Activación no lineal (en este caso ReLu)
             num_capa = num_capa + 1
         # Transformando readout
         if(self.graph_pooling == "sum"):
