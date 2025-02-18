@@ -17,8 +17,8 @@ from ogb.graphproppred import PygGraphPropPredDataset, Evaluator
 LR = 0.001
 DR = 0.20
 
-# Definimos el grado máximo esperado para la codificación one-hot.
-max_degree = 10  
+# Definimos el grado máximo esperado para la codificación one-hot a la media de grado de los nodos.
+max_degree = 18  
 # La dimensión de la representación inicial: one-hot (max_degree+1) + raw degree (1) + avg neighbor degree (1)
 dim_repr_nodo = max_degree + 3
 
