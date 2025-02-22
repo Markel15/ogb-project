@@ -14,7 +14,7 @@ class GCN(torch.nn.Module):
         self.capas = torch.nn.ModuleList()
         for capa in range(num_capas):
             self.capas.append(GraphConvolution(dim_repr_nodo, metodo_agregacion))
-        self.node_encoder = torch.nn.Embedding(1, dim_repr_nodo) # Codificador para transformar las dimensiones de los nodos
+        self.node_encoder = torch.nn.Embedding(1, dim_repr_nodo) # Codificador para transformar las dimensiones de los nodos. Es como una capa de unión para conectar las representaciones iniciales con las de las capas 
         # A continuación definimos la capa de salida que será alimentada con el pooling del grafo completo y determinará la clasificación por cada instancia
         self.perceptron = torch.nn.Linear(dim_repr_nodo, num_clases)
 
