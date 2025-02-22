@@ -154,7 +154,7 @@ def plot_learning_curve(accuracy_validation, accuracy_test, last_test_score, bes
     hora_actual = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     if not os.path.exists("img"):
         os.makedirs("img")
-    nombre_archivo = f'img/MLP_{hora_actual}_nc{NUM_LAYERS}_lr{LR}_drop{DR}_hidden_dim{HIDDEN_DIM}_maxtest{last_test_score:.3f}_maxval{best_valid_score:.4f}_loss{loss_final}_{tiempo_total}.png'
+    nombre_archivo = f'img/MLP_{hora_actual}_NumCapas{NUM_LAYERS}_lr{LR}_drop{DR}_hidden_dim{HIDDEN_DIM}_maxtest{last_test_score:.3f}_maxval{best_valid_score:.4f}_loss{loss_final}_{tiempo_total}.png'
     nombre_archivo = re.sub(r':', '-', nombre_archivo)
     plt.savefig(nombre_archivo)
     plt.show()
