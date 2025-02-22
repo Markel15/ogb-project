@@ -17,10 +17,14 @@ from ogb.graphproppred import PygGraphPropPredDataset, Evaluator
 LR = 0.001
 DR = 0.20
 
-# Definimos el grado máximo esperado para la codificación one-hot a la media de grado de los nodos.
+# Parámetros para la representación de los nodos:
+# Se utiliza un one-hot del grado (limitado a max_degree) + raw degree (1) + average neighbor degree (1)
 max_degree = 18  
-# La dimensión de la representación inicial: one-hot (max_degree+1) + raw degree (1) + avg neighbor degree (1)
 dim_repr_nodo = max_degree + 3
+
+# Parámetros para el MLP (perceptrón)
+NUM_LAYERS = 2      # Número total de capas del perceptrón (incluye la capa de salida)
+HIDDEN_DIM = 128    # Dimensión de las capas ocultas
 
 def inicializar_x(data):
     """
@@ -46,18 +50,20 @@ def inicializar_x(data):
     data.x = torch.cat([one_hot, deg_float.unsqueeze(1), avg_neighbor_deg.unsqueeze(1)], dim=1)
     return data
 
-# Definición de la clase MLP (perceptrón) que utiliza un pooling global.
 class MLP(torch.nn.Module):
-    def __init__(self, num_clases, dim_repr_nodo, drop_ratio, graph_pooling):
+    def __init__(self, num_clases, dim_repr_nodo, drop_ratio, graph_pooling, num_layers, hidden_dim):
         """
         Args:
             num_clases (int): Número de clases de salida.
             dim_repr_nodo (int): Dimensión de las representaciones de los nodos.
             drop_ratio (float): Porcentaje de dropout.
             graph_pooling (str): Tipo de pooling global a utilizar ('sum', 'mean' o 'max').
+            num_layers (int): Número total de capas en el MLP (incluye capa de salida).
+            hidden_dim (int): Dimensión de las capas ocultas.
         """
         super(MLP, self).__init__()
         self.drop_ratio = drop_ratio
+        self.num_layers = num_layers
 
         # Seleccionar la función de pooling global según el parámetro
         if graph_pooling == "sum":
@@ -69,8 +75,19 @@ class MLP(torch.nn.Module):
         else:
             raise ValueError(f"Pooling type '{graph_pooling}' not supported.")
 
-        # Capa lineal (perceptrón) para la clasificación final
-        self.perceptron = torch.nn.Linear(dim_repr_nodo, num_clases)
+        # Construir las capas del MLP de forma automática
+        self.layers = torch.nn.ModuleList()
+        if num_layers == 1:
+            # Caso base: una única capa que mapea directamente a la salida
+            self.layers.append(torch.nn.Linear(dim_repr_nodo, num_clases))
+        else:
+            # Primera capa: de la representación de entrada a la dimensión oculta
+            self.layers.append(torch.nn.Linear(dim_repr_nodo, hidden_dim))
+            # Capas ocultas intermedias (si existen)
+            for _ in range(num_layers - 2):
+                self.layers.append(torch.nn.Linear(hidden_dim, hidden_dim))
+            # Última capa: de la dimensión oculta al número de clases
+            self.layers.append(torch.nn.Linear(hidden_dim, num_clases))
 
     def forward(self, x, batch):
         """
@@ -78,14 +95,23 @@ class MLP(torch.nn.Module):
             x (Tensor): Representaciones de los nodos de forma [num_nodos, dim_repr_nodo].
             batch (Tensor): Vector que asigna cada nodo a un grafo en el batch.
         Returns:
-            Tensor: Salida del perceptrón (logits) para cada grafo.
+            Tensor: Salida del MLP (logits) para cada grafo.
         """
         # Aplicar pooling global para obtener una representación por grafo
         x = self.pooling(x, batch)
-        # Aplicar dropout para regularización
+        # Aplicar dropout inicial
         x = F.dropout(x, p=self.drop_ratio, training=self.training)
-        # Clasificación mediante la capa lineal
-        x = self.perceptron(x)
+        
+        if self.num_layers == 1:
+            x = self.layers[0](x)
+        else:
+            for i, layer in enumerate(self.layers):
+                # Para todas las capas excepto la última, aplicar ReLU y dropout
+                if i < self.num_layers - 1:
+                    x = F.relu(layer(x))
+                    x = F.dropout(x, p=self.drop_ratio, training=self.training)
+                else:
+                    x = layer(x)
         return x
 
 def train(model, train_loader, optimizador, criterio, device):
@@ -94,7 +120,7 @@ def train(model, train_loader, optimizador, criterio, device):
     for data in tqdm(train_loader, desc="Entrenando...", unit="batch"):
         data = data.to(device)
         optimizador.zero_grad()
-        # La MLP usa únicamente x y batch
+        # El MLP usa únicamente x y batch
         pred = model(data.x, data.batch)
         loss = criterio(pred, data.y.view(-1))
         loss.backward()
@@ -128,7 +154,7 @@ def plot_learning_curve(accuracy_validation, accuracy_test, last_test_score, bes
     hora_actual = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     if not os.path.exists("img"):
         os.makedirs("img")
-    nombre_archivo = f'img/curvas_precision_{hora_actual}_lr{LR}_drop{DR}_dim{dim_repr_nodo}_maxtest{last_test_score:.3f}_maxval{best_valid_score:.4f}_loss{loss_final}_{tiempo_total}.png'
+    nombre_archivo = f'img/MLP_{hora_actual}_nc{NUM_LAYERS}_lr{LR}_drop{DR}_hidden_dim{HIDDEN_DIM}_maxtest{last_test_score:.3f}_maxval{best_valid_score:.4f}_loss{loss_final}_{tiempo_total}.png'
     nombre_archivo = re.sub(r':', '-', nombre_archivo)
     plt.savefig(nombre_archivo)
     plt.show()
@@ -161,7 +187,13 @@ def main():
     test_loader = DataLoader(dataset[split_idx['test']], batch_size=32, shuffle=False)
 
     # Se crea el modelo MLP utilizando la dimensión enriquecida de las representaciones de los nodos
-    model = MLP(num_clases=dataset.num_classes, dim_repr_nodo=dim_repr_nodo, drop_ratio=DR, graph_pooling='mean')
+    # y los parámetros para configurar las capas automáticamente.
+    model = MLP(num_clases=dataset.num_classes,
+                dim_repr_nodo=dim_repr_nodo,
+                drop_ratio=DR,
+                graph_pooling='mean',
+                num_layers=NUM_LAYERS,
+                hidden_dim=HIDDEN_DIM)
     model = model.to(device)
 
     optimizador = optim.Adam(model.parameters(), lr=LR)
@@ -170,7 +202,7 @@ def main():
     accuracy_validation = []
     accuracy_test = []
     best_valid_score = 0
-    paciencia = 10  # Épocas sin mejora para early stopping
+    paciencia = 7  # Épocas sin mejora para early stopping
     epochs_sin_mejora = 0
     parar = False
     start_time = datetime.now()
