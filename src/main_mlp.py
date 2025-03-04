@@ -14,7 +14,7 @@ from torch_scatter import scatter_mean  # Para agregar valores en base a índice
 from ogb.graphproppred import PygGraphPropPredDataset, Evaluator
 
 # Parámetros globales
-LR = 0.001
+LR = 0.005
 DR = 0.20
 
 # Parámetros para la representación de los nodos:
@@ -24,7 +24,7 @@ dim_repr_nodo = max_degree + 3
 
 # Parámetros para el MLP (perceptrón)
 NUM_LAYERS = 2      # Número total de capas del perceptrón (incluye la capa de salida)
-HIDDEN_DIM = 128    # Dimensión de las capas ocultas
+HIDDEN_DIM = 200    # Dimensión de las capas ocultas
 
 def inicializar_x(data):
     """
@@ -154,7 +154,7 @@ def plot_learning_curve(accuracy_validation, accuracy_test, last_test_score, bes
     hora_actual = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     if not os.path.exists("img"):
         os.makedirs("img")
-    nombre_archivo = f'img/MLP_{hora_actual}_NumCapas{NUM_LAYERS}_lr{LR}_drop{DR}_hidden_dim{HIDDEN_DIM}_maxtest{last_test_score:.3f}_maxval{best_valid_score:.4f}_loss{loss_final}_{tiempo_total}.png'
+    nombre_archivo = f'img/MLP_{hora_actual}_NumCapas_{NUM_LAYERS}_lr{LR}_drop{DR}_hidden_dim_{HIDDEN_DIM}_maxtest{last_test_score:.3f}_maxval{best_valid_score:.4f}_loss{loss_final}_{tiempo_total}.png'
     nombre_archivo = re.sub(r':', '-', nombre_archivo)
     plt.savefig(nombre_archivo)
     plt.show()
@@ -178,7 +178,7 @@ def main():
         print(torch.cuda.get_device_name(0))
     
     split_idx = dataset.get_idx_split()
-    # Si deseas trabajar con un subconjunto del dataset, puedes usar la función reducir_tamaño
+    # Si se quiere trabajar con un subconjunto del dataset, se puede usar la función reducir_tamaño
     # split_idx = reducir_tamaño(split_idx, porcentaje=0.5)
 
     evaluator = Evaluator('ogbg-ppa')
@@ -186,8 +186,7 @@ def main():
     valid_loader = DataLoader(dataset[split_idx['valid']], batch_size=32, shuffle=False)
     test_loader = DataLoader(dataset[split_idx['test']], batch_size=32, shuffle=False)
 
-    # Se crea el modelo MLP utilizando la dimensión enriquecida de las representaciones de los nodos
-    # y los parámetros para configurar las capas automáticamente.
+    # Se crea el modelo MLP utilizando la dimensión enriquecida de las representaciones de los nodos y los parámetros para configurar las capas automáticamente.
     model = MLP(num_clases=dataset.num_classes,
                 dim_repr_nodo=dim_repr_nodo,
                 drop_ratio=DR,
