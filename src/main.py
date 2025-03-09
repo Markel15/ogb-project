@@ -14,7 +14,7 @@ from ogb.graphproppred import PygGraphPropPredDataset, Evaluator
 LR=0.001
 DR=0.20
 NC=4
-ReprNodo=200
+ReprNodo=164
 
 def train(model, train_loader, optimizador, criterio, device):
     model.train() # metodo heredado de torch.nn.Module, pone el modelo en modo entrenamiento(dropout y más)
@@ -62,7 +62,7 @@ def main():
     valid_loader = DataLoader(dataset[split_idx['valid']], batch_size = 32, shuffle=False)
     test_loader = DataLoader(dataset[split_idx['test']], batch_size = 32, shuffle=False)
 
-    model = GCN(num_clases=dataset.num_classes, num_capas=NC, dim_repr_nodo=ReprNodo, metodo_agregacion='add', drop_ratio=DR, graph_pooling='mean')
+    model = GCN(num_clases=dataset.num_classes, num_capas=NC, dim_repr_nodo=ReprNodo, metodo_agregacion='add', drop_ratio=DR, graph_pooling='combinacion')
     model = model.to(device)
 
     # Configuración de optimizador y criterio de pérdida

@@ -16,7 +16,13 @@ class GCN(torch.nn.Module):
             self.capas.append(GraphConvolution(dim_repr_nodo, metodo_agregacion))
         self.node_encoder = torch.nn.Embedding(1, dim_repr_nodo) # Codificador para transformar las dimensiones de los nodos. Es como una capa de unión para conectar las representaciones iniciales con las de las capas 
         # A continuación definimos la capa de salida que será alimentada con el pooling del grafo completo y determinará la clasificación por cada instancia
-        self.perceptron = torch.nn.Linear(dim_repr_nodo, num_clases)
+        
+         # Ajustar la dimensión de la capa final si se usa pooling combinado
+        if self.graph_pooling == "combinacion":
+            final_dim = dim_repr_nodo * 3
+        else:
+            final_dim = dim_repr_nodo
+        self.perceptron = torch.nn.Linear(final_dim, num_clases)
 
     def forward(self, x, edge_index, edge_attr, batch):
         # Propagación a través de todas las capas convolucionales
@@ -32,12 +38,18 @@ class GCN(torch.nn.Module):
             num_capa = num_capa + 1
         # Transformando readout
         if(self.graph_pooling == "sum"):
-            self.pooling = global_add_pool
+            x = global_add_pool(x, batch) # la variable batch según la documentación oficial sirve para indicar el grafo al que pertenece cada nodo
         elif(self.graph_pooling == "mean"):
-            self.pooling = global_mean_pool
+            x = global_mean_pool(x, batch)
         elif(self.graph_pooling == "max"):
-            self.pooling = global_max_pool
-        x = self.pooling(x, batch) # la variable batch según la documentación oficial sirve para indicar el grafo al que pertenece cada nodo
+            x = global_max_pool(x, batch)
+        elif self.graph_pooling == "combinacion":
+            x_sum = global_add_pool(x, batch)
+            x_mean = global_mean_pool(x, batch)
+            x_max = global_max_pool(x, batch)
+            x = torch.cat([x_sum, x_mean, x_max], dim=1)
+        else:
+            raise ValueError("El método de pooling no está definido")   
 
         # Aplicando el clasificador final (una red neuronal simple de una capa con dropout)
         x = F.dropout(x, p=self.drop_ratio, training=self.training) # self.training define si aplicar dropout (True) o no (Flase). Se gestiona automaticamente al hacer train y eval
