@@ -1,10 +1,10 @@
 import torch
 from layers import GraphConvolution
 import torch.nn.functional as F
-from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool
+from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, TopKPooling, SAGPooling
 
 class GCN(torch.nn.Module):
-    def __init__(self, num_clases, num_capas, dim_repr_nodo, metodo_agregacion, drop_ratio, graph_pooling): # Por simplificación, de momento las dimensiones de todas las capas ocultas se mantienen iguales
+    def __init__(self, num_clases, num_capas, dim_repr_nodo, metodo_agregacion, drop_ratio, graph_pooling, ratio=0.4): # Por simplificación, de momento las dimensiones de todas las capas ocultas se mantienen iguales
         super(GCN, self).__init__()
         # Definiendo variables para poder utilizarlas en los siguientes metodos 
         self.graph_pooling = graph_pooling
@@ -17,9 +17,16 @@ class GCN(torch.nn.Module):
         self.node_encoder = torch.nn.Embedding(1, dim_repr_nodo) # Codificador para transformar las dimensiones de los nodos. Es como una capa de unión para conectar las representaciones iniciales con las de las capas 
         # A continuación definimos la capa de salida que será alimentada con el pooling del grafo completo y determinará la clasificación por cada instancia
         
-         # Ajustar la dimensión de la capa final si se usa pooling combinado
+         # Ajustar la dimensión de la capa final dependiendo el tipo de pooling
         if self.graph_pooling == "combinacion":
             final_dim = dim_repr_nodo * 3
+        elif self.graph_pooling == "topk":
+            # Se define la capa de TopKPooling. El parámetro ratio se puede ajustar.
+            self.topk_pool = TopKPooling(dim_repr_nodo, ratio=ratio)
+            final_dim = dim_repr_nodo
+        elif self.graph_pooling == "sag":
+            self.sag_pool = SAGPooling(dim_repr_nodo, ratio=ratio)
+            final_dim = dim_repr_nodo
         else:
             final_dim = dim_repr_nodo
         self.perceptron = torch.nn.Linear(final_dim, num_clases)
@@ -48,6 +55,14 @@ class GCN(torch.nn.Module):
             x_mean = global_mean_pool(x, batch)
             x_max = global_max_pool(x, batch)
             x = torch.cat([x_sum, x_mean, x_max], dim=1)
+        elif self.graph_pooling == "topk":
+            # Aplicar TopKPooling para reducir los nodos del grafo
+            x, edge_index, edge_attr, batch, _, _ = self.topk_pool(x, edge_index, edge_attr, batch=batch)
+            # Se aplica un pooling global simple para obtener una representación fija por grafo
+            x = global_mean_pool(x, batch)
+        elif self.graph_pooling == "sag":
+            x, edge_index, _, batch, _, _ = self.sag_pool(x, edge_index, None, batch)
+            x = global_mean_pool(x, batch)
         else:
             raise ValueError("El método de pooling no está definido")   
 
