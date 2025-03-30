@@ -62,7 +62,7 @@ def main():
     valid_loader = DataLoader(dataset[split_idx['valid']], batch_size = 32, shuffle=False)
     test_loader = DataLoader(dataset[split_idx['test']], batch_size = 32, shuffle=False)
 
-    model = GCN(num_clases=dataset.num_classes, num_capas=NC, dim_repr_nodo=ReprNodo, metodo_agregacion='add', drop_ratio=DR, graph_pooling='sag', ratio=0.4)
+    model = GCN(num_clases=dataset.num_classes, num_capas=NC, dim_repr_nodo=ReprNodo, metodo_agregacion='add', drop_ratio=DR, graph_pooling='mean', usar_residual=True)
     model = model.to(device)
 
     # Configuración de optimizador y criterio de pérdida

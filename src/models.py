@@ -4,16 +4,17 @@ import torch.nn.functional as F
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, TopKPooling, SAGPooling
 
 class GCN(torch.nn.Module):
-    def __init__(self, num_clases, num_capas, dim_repr_nodo, metodo_agregacion, drop_ratio, graph_pooling, ratio=0.4): # Por simplificación, de momento las dimensiones de todas las capas ocultas se mantienen iguales
+    def __init__(self, num_clases, num_capas, dim_repr_nodo, metodo_agregacion, drop_ratio, graph_pooling, ratio=0.4, usar_residual=True): # Por simplificación, de momento las dimensiones de todas las capas ocultas se mantienen iguales
         super(GCN, self).__init__()
         # Definiendo variables para poder utilizarlas en los siguientes metodos 
         self.graph_pooling = graph_pooling
         self.drop_ratio = drop_ratio
         self.num_capas = num_capas
+        self.usar_residual = usar_residual
         # Crear una lista de capas GraphConvolution
         self.capas = torch.nn.ModuleList()
         for capa in range(num_capas):
-            self.capas.append(GraphConvolution(dim_repr_nodo, metodo_agregacion))
+            self.capas.append(GraphConvolution(dim_repr_nodo, metodo_agregacion, usar_residual))
         self.node_encoder = torch.nn.Embedding(1, dim_repr_nodo) # Codificador para transformar las dimensiones de los nodos. Es como una capa de unión para conectar las representaciones iniciales con las de las capas 
         # A continuación definimos la capa de salida que será alimentada con el pooling del grafo completo y determinará la clasificación por cada instancia
         
