@@ -99,8 +99,6 @@ class MLP(torch.nn.Module):
         """
         # Aplicar pooling global para obtener una representación por grafo
         x = self.pooling(x, batch)
-        # Aplicar dropout inicial
-        x = F.dropout(x, p=self.drop_ratio, training=self.training)
         
         if self.num_layers == 1:
             x = self.layers[0](x)
