@@ -54,6 +54,58 @@ nx.draw(G, pos, with_labels=True, node_color='skyblue', node_size=500, font_size
 plt.title(f"Visualización del grafo con propiedad: {y.item()}")
 plt.show()
 
+split_idx = dataset.get_idx_split()
+# Función para describir un split con estadísticas agregadas
+def describe_split(split_name, split_indices):
+    print(f"\nDescribiendo el split: {split_name}")
+    
+    # Inicializar variables para estadísticas agregadas
+    num_graphs = len(split_indices)
+    node_counts = []
+    edge_counts = []
+    
+    # Calcular estadísticas para cada grafo en el split
+    for i in range(num_graphs):
+        data = dataset[split_indices[i]]
+        
+        # Contar nodos y aristas
+        node_counts.append(data.num_nodes)
+        edge_counts.append(data.num_edges)
+        
+    # Calcular promedios y desviaciones
+    avg_nodes = np.mean(node_counts)
+    avg_edges = np.mean(edge_counts)
+    std_nodes = np.std(node_counts)
+    std_edges = np.std(edge_counts)
+    
+    # Mostrar estadísticas agregadas
+    print(f"Número total de grafos en el split {split_name}: {num_graphs}")
+    print(f"Promedio de nodos por grafo: {avg_nodes:.2f} ± {std_nodes:.2f}")
+    print(f"Promedio de aristas por grafo: {avg_edges:.2f} ± {std_edges:.2f}")
+    
+    # Mostrar distribución de clases en el split
+    labels = [dataset[idx].y.item() for idx in split_indices]
+    unique, counts = np.unique(labels, return_counts=True)
+    print(f"\nDistribución de clases en el split {split_name}:")
+    for u, c in zip(unique, counts):
+        print(f"Clase {u}: {c} grafos")
+
+    # Visualizar la distribución de clases en un gráfico de barras
+    plt.figure(figsize=(6, 4))
+    plt.bar(unique, counts)
+    plt.xlabel('Clases')
+    plt.ylabel('Frecuencia')
+    plt.title(f'Distribución de clases en el split {split_name}')
+    plt.show()
+
+# Describir el split de entrenamiento
+describe_split('Entrenamiento', split_idx['train'])
+
+# Describir el split de validación
+describe_split('Validación', split_idx['valid'])
+
+# Describir el split de prueba
+describe_split('Prueba', split_idx['test'])
 '''
 numero = 0
 

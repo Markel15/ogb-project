@@ -31,7 +31,7 @@ def train(model, train_loader, optimizador, criterio, device):
 
 def evaluate(model, loader, evaluator, device):
     model.eval() # Iniciar modo de evaluación 
-    y_true, y_pred = [], [] # Inicializar listas vacias con las etiquetas correctas y las predicas.
+    y_true, y_pred = [], [] # Inicializar listas vacias con las etiquetas correctas y las predichas.
     for data in tqdm(loader, desc="Evaluando...", unit="batch"):
         data = data.to(device)
         with torch.no_grad(): # Utilizado para no calcular los gradientes ya que como aparece en la documentacion no es necesario en la inferencia puesto que no estamos entrenando nada y libera memoria
