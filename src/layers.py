@@ -68,9 +68,9 @@ class GINConv(MessagePassing):
 
         # Capa de perceptrón para realizar la agregación no lineal
         self.mlp = torch.nn.Sequential(
-            torch.nn.Linear(dim_repr_nodo * 2, dim_repr_nodo),
+            torch.nn.Linear(dim_repr_nodo, dim_repr_nodo*2),
             torch.nn.ReLU(),
-            torch.nn.Linear(dim_repr_nodo, dim_repr_nodo)
+            torch.nn.Linear(dim_repr_nodo*2, dim_repr_nodo)
         )
         self.eps = eps  # Parámetro de regularización de GIN
         self.usar_residual = usar_residual
