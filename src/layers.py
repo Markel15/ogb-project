@@ -1,6 +1,7 @@
 import torch
 from torch_geometric.utils import add_self_loops, degree
 from torch_geometric.nn.conv import MessagePassing
+import torch.nn.functional as F
 
 class GraphConvolution(MessagePassing): 
     #Al heredar de MessagePassing hay que definir los metodos de forward, message y update como mínimo
@@ -58,4 +59,55 @@ class GraphConvolution(MessagePassing):
 
     def update(self, representacion): # No hay que cambiar update nos serviría la versión heredada
         return representacion
+    
+class GINConv(MessagePassing):
+    def __init__(self, dim_repr_nodo, metodo_agregacion, usar_residual=True, usar_batch_norm=True, eps=0.0):
+        super(GINConv, self).__init__(aggr=metodo_agregacion)
+
+        self.edge_transformer = torch.nn.Linear(7, dim_repr_nodo)
+
+        # Capa de perceptrón para realizar la agregación no lineal
+        self.mlp = torch.nn.Sequential(
+            torch.nn.Linear(dim_repr_nodo * 2, dim_repr_nodo),
+            torch.nn.ReLU(),
+            torch.nn.Linear(dim_repr_nodo, dim_repr_nodo)
+        )
+        self.eps = eps  # Parámetro de regularización de GIN
+        self.usar_residual = usar_residual
+        self.usar_batch_norm = usar_batch_norm
         
+        if usar_batch_norm:
+            self.batch_norm = torch.nn.BatchNorm1d(dim_repr_nodo)
+
+    def forward(self, input, edge_index, edge_attr=None):
+        # Guardamos input original para la conexión residual
+        residual = input
+
+        edge_index, edge_attr = add_self_loops(edge_index, edge_attr=edge_attr, num_nodes=input.size(0)) # Al añadir los nodos propios a las matrices de adyacencia, implicitamente incluimos nuevas aristas por eso debemos añadir esas nuevas características como información a aprender en el paso de mensajes
+        
+        # Transformaciones
+        input = self.mlp(input)
+        nuevas_aristas = self.edge_transformer(edge_attr)
+
+        # Normalización por grados (no se indica en el paper si es recomendable o no, pero, decido ponerlo porque tiene sentido)
+        row, col = edge_index
+        deg = degree(col, input.size(0), dtype=input.dtype)
+        deg_inv_sqrt = deg.pow(-0.5)
+        deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+        norm = deg_inv_sqrt[row] * deg_inv_sqrt[col]
+
+        output = self.mlp((1 + self.eps) * input + self.propagate(edge_index, x=input, edge_attr=nuevas_aristas, norm=norm)) # Ecuacion 4.1 del paper de las GIN
+
+        if self.usar_batch_norm:
+            output = self.batch_norm(output)
+
+        # Añadir la conexión residual si está activada
+        if self.usar_residual:
+            output = output + residual
+        return output
+
+    def message(self, x_j, edge_attr, norm):
+        return norm.view(-1, 1) * F.relu(x_j + edge_attr)
+    
+    def update(self, representacion): # No hay que cambiar update nos serviría la versión heredada
+        return representacion
