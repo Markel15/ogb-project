@@ -14,7 +14,7 @@ from ogb.graphproppred import PygGraphPropPredDataset, Evaluator
 LR=0.001
 DR=0.20
 NC=4
-ReprNodo=164
+ReprNodo=200
 
 def train(model, train_loader, optimizador, criterio, device):
     model.train() # metodo heredado de torch.nn.Module, pone el modelo en modo entrenamiento(dropout y más)
@@ -73,7 +73,7 @@ def main():
     accuracy_validation = []
     accuracy_test = []
     best_valid_score = 0
-    paciencia = 10  # Número máximo de épocas sin mejora
+    paciencia = 30  # Número máximo de épocas sin mejora
     epochs_sin_mejora = 0
     parar = False
     start_time = datetime.now()
