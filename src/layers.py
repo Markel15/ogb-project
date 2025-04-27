@@ -95,9 +95,6 @@ class GINConv(MessagePassing):
 
         output = self.mlp((1 + self.eps) * input + self.propagate(edge_index, x=input, edge_attr=nuevas_aristas)) # Ecuacion 4.1 del paper de las GIN
 
-        if self.usar_batch_norm:
-            output = self.batch_norm(output)
-
         # Añadir la conexión residual si está activada
         if self.usar_residual:
             output = output + residual
