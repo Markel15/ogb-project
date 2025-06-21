@@ -61,7 +61,7 @@ class GraphConvolution(MessagePassing):
         return representacion
     
 class GINConv(MessagePassing):
-    def __init__(self, dim_repr_nodo, metodo_agregacion, usar_residual=True, usar_batch_norm=True, eps=0.0):
+    def __init__(self, dim_repr_nodo, metodo_agregacion, usar_residual=True, usar_batch_norm=True, eps=0.01):
         super(GINConv, self).__init__(aggr=metodo_agregacion)
 
         self.edge_transformer = torch.nn.Linear(7, dim_repr_nodo)
