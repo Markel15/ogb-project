@@ -37,7 +37,7 @@ data = dataset[0]
 
 # Acceder a la información del grafo
 edge_index = data.edge_index  # Conexiones de los nodos
-y = data.y                   # Etiqueta de la propiedad del grafo
+y = data.y # Etiqueta de la propiedad del grafo
 
 # Convertir el grafo a un formato de NetworkX
 G = nx.Graph()
@@ -50,7 +50,7 @@ for i in range(edge_index.shape[1]):  # edge_index tiene la forma (2, num_arista
 # Visualizar el grafo
 plt.figure(figsize=(10, 10))
 pos = nx.spring_layout(G, seed=42)  # Distribución de los nodos
-nx.draw(G, pos, with_labels=True, node_color='skyblue', node_size=500, font_size=12, font_weight='bold', edge_color='gray')
+nx.draw(G, pos, with_labels=False, node_color='skyblue', node_size=500, font_size=12, font_weight='bold', edge_color='gray',  linewidths=1, edgecolors='black')
 plt.title(f"Visualización del grafo con propiedad: {y.item()}")
 plt.show()
 
