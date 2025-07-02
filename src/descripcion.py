@@ -2,6 +2,7 @@ from ogb.graphproppred import PygGraphPropPredDataset
 import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
+import csv
 
 # Cargar el dataset OGBG-PPA
 dataset = PygGraphPropPredDataset(name='ogbg-ppa')
@@ -98,6 +99,15 @@ def describe_split(split_name, split_indices):
     plt.title(f'Distribución de clases en el split {split_name}')
     plt.show()
 
+# Función para exportar el grafo a CSV
+def export_graph_to_csv(graph, filename="graph_edges.csv"):
+    edges = list(graph.edges())
+    with open(filename, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['Node1', 'Node2'])
+        for edge in edges:
+            writer.writerow([edge[0], edge[1]])
+
 # Describir el split de entrenamiento
 describe_split('Entrenamiento', split_idx['train'])
 
@@ -106,6 +116,9 @@ describe_split('Validación', split_idx['valid'])
 
 # Describir el split de prueba
 describe_split('Prueba', split_idx['test'])
+
+# Exportar las aristas del primer grafo
+export_graph_to_csv(G, "graph_edges.csv")
 '''
 numero = 0
 
