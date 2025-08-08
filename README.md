@@ -43,6 +43,7 @@ The reported training times were obtained using:
 ## ⚙️ Requirements
 
 - Python 3.8+
+- ogb >= 1.1.1
 - PyTorch >= 1.12
 - [PyTorch Geometric](https://pytorch-geometric.readthedocs.io/)
 - tqdm, matplotlib
@@ -50,3 +51,4 @@ The reported training times were obtained using:
 ```bash
 pip install torch-geometric
 pip install matplotlib tqdm
+
