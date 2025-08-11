@@ -40,15 +40,22 @@ The reported training times were obtained using:
 - **CPU**: Intel® Core™ i7-10700K @ 3.80GHz
 - **RAM**: 32 GB DDR4 3200 MHz
 
-## ⚙️ Requirements
+### 📈 Test Accuracy (Mean ± Standard Deviation)
 
-- Python 3.8+
-- ogb >= 1.1.1
-- PyTorch >= 1.12
-- [PyTorch Geometric](https://pytorch-geometric.readthedocs.io/)
-- tqdm, matplotlib
+To account for variability between runs, the following results are reported as the mean ± standard deviation of test accuracy over multiple executions:
+
+| Model    | Test Accuracy (Mean ± Std) |
+|----------|-----------------------------|
+| GCN      | 64.29 ± 0.002 %              |
+| GIN      | 72.23 ± 0.007 %              |
+
+## ⚙️ Installation
 
 ```bash
-pip install torch-geometric
-pip install matplotlib tqdm
+pip install -r requirements.txt
+```
+For showing graphs
+```bash
+pip install matplotlib
+
 
