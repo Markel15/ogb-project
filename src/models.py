@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, TopKPooling, SAGPooling
 
 class GNN(torch.nn.Module):
-    def __init__(self, tipo_gnn, num_clases, num_capas, dim_repr_nodo, metodo_agregacion, drop_ratio, graph_pooling, ratio=0.4, usar_residual=True,  usar_batch_norm=False): # Por simplificación, de momento las dimensiones de todas las capas ocultas se mantienen iguales
+    def __init__(self, tipo_gnn, num_clases, num_capas, dim_repr_nodo, metodo_agregacion, drop_ratio, graph_pooling, ratio=0.4, usar_residual=True,  usar_batch_norm=False, epsilon=0.01): # Por simplificación, de momento las dimensiones de todas las capas ocultas se mantienen iguales
         super(GNN, self).__init__()
         # Definiendo variables para poder utilizarlas en los siguientes metodos 
         self.graph_pooling = graph_pooling
@@ -17,7 +17,7 @@ class GNN(torch.nn.Module):
         self.capas = torch.nn.ModuleList()
         for capa in range(num_capas):
             if tipo_gnn == 'gin':
-                self.capas.append(GINConv(dim_repr_nodo, metodo_agregacion, usar_residual, usar_batch_norm))
+                self.capas.append(GINConv(dim_repr_nodo, metodo_agregacion, usar_residual, usar_batch_norm, epsilon))
             elif tipo_gnn == 'gcn':
                 self.capas.append(GraphConvolution(dim_repr_nodo, metodo_agregacion, usar_residual, usar_batch_norm))
             else:

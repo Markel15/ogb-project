@@ -7,14 +7,82 @@ import matplotlib.pyplot as plt
 import os
 from datetime import datetime
 from datetime import timedelta
+import argparse
 
 from models import GNN
 from ogb.graphproppred import PygGraphPropPredDataset, Evaluator
 
-LR=0.001
-DR=0.20
-NC=4
-ReprNodo=200
+def parse_args():
+    """Configure argumetns"""
+    parser = argparse.ArgumentParser(
+        description='OGB Protein Classification with GNNs',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    
+    # Basic arguments
+    parser.add_argument('--model', type=str, default='gin',
+                       choices=['gin', 'gcn'],
+                       help='GNN type: gcn or gin. gin by default')
+    
+    parser.add_argument('--layers', type=int, default=4,
+                       help='Number of layers (4 by default)')
+    
+    parser.add_argument('--hidden_dim', type=int, default=200,
+                       help='Node representation dimension (200 by default)')
+    
+    parser.add_argument('--epochs', type=int, default=60,
+                       help='Number of epochs for training (60 by default)')
+    
+    parser.add_argument('--lr', type=float, default=0.001,
+                       help='Learning rate (0.001 by default)')
+    
+    parser.add_argument('--dropout', type=float, default=0.2,
+                       help='Dropout rate (0.2 by default)')
+    
+    parser.add_argument('--batch_size', type=int, default=32,
+                       help='Batch size, 32 by default')
+    
+    # Model specific options
+    parser.add_argument('--pooling', type=str, default='mean',
+                       choices=['mean', 'add', 'max', 'combinacion', 'topk', 'sagpooling'],
+                       help='Graph pooling type')
+    
+    parser.add_argument('--aggregation', type=str, default='add',
+                       choices=['add', 'mean', 'max'],
+                       help='Agreggation method')
+    
+    parser.add_argument('--batch_norm', action='store_true',
+                       help='Use batch normalization')
+    
+    parser.add_argument('--no_batch_norm', dest='batch_norm', action='store_false',
+                        help='No batch normalization')
+
+    parser.set_defaults(batch_norm=True)
+    
+    parser.add_argument('--residual', action='store_true',
+                       help='Use residual connections')
+    
+    parser.add_argument('--no_residual', dest='residual', action='store_false',
+                        help='No residual connections')
+
+    parser.set_defaults(residual=False)
+
+    parser.add_argument('--eps', type=float, default=0.01, 
+                        help="Value of epsilon for GINs")
+
+    parser.add_argument('--ratio', type=float, default=0.40, 
+                        help="Percentage of instances to left after aplying Top-K pooling or SAGPooling. 0.40 by default")
+
+    # Training options
+    parser.add_argument('--patience', type=int, default=12,
+                       help='Patience for the early stopping (12 by default)')
+    
+    # Opciones de sistema
+    parser.add_argument('--device', type=str, default='auto',
+                       choices=['auto', 'cpu', 'cuda'],
+                       help='Device to use: auto, cpu or cuda')
+    
+    return parser.parse_args()
 
 def train(model, train_loader, optimizador, criterio, device):
     model.train() # metodo heredado de torch.nn.Module, pone el modelo en modo entrenamiento(dropout y más)
@@ -47,37 +115,46 @@ def inicializar_x(data):
     return data
 
 def main():
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    args = parse_args()
+
+    if args.device == 'auto':
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    else:
+        device = torch.device(args.device)
     dataset = PygGraphPropPredDataset(name = 'ogbg-ppa', transform = inicializar_x)
     
     print(f'Usando el dispositivo: {device}')
-    print(torch.cuda.get_device_name(0))
+    if device.type == "cuda":
+        print(torch.cuda.get_device_name(0))
 
     split_idx = dataset.get_idx_split()
     # split_idx = reducir_tamaño(split_idx, porcentaje=0.5)
 
     # Utilizar el evaluador del paquete
     evaluator = Evaluator('ogbg-ppa')
-    train_loader = DataLoader(dataset[split_idx['train']], batch_size = 32, shuffle=True)
-    valid_loader = DataLoader(dataset[split_idx['valid']], batch_size = 32, shuffle=False)
-    test_loader = DataLoader(dataset[split_idx['test']], batch_size = 32, shuffle=False)
+    train_loader = DataLoader(dataset[split_idx['train']], batch_size = args.batch_size, shuffle=True)
+    valid_loader = DataLoader(dataset[split_idx['valid']], batch_size = args.batch_size, shuffle=False)
+    test_loader = DataLoader(dataset[split_idx['test']], batch_size = args.batch_size, shuffle=False)
 
-    model = GNN(num_clases=dataset.num_classes, tipo_gnn="gin", num_capas=NC, dim_repr_nodo=ReprNodo, metodo_agregacion='add', drop_ratio=DR, graph_pooling='mean', usar_residual=False,  usar_batch_norm=True)
+
+    # TODO: HAY QUE AÑADIR TAMBIEN AL ARGS EL EPSILON E IGUAL ALGO MÁS QUE AHORA SE ME HAYA OLVIDADO (Ratio del topk o sagpooling creo (el mismo para los 2 pero no sé si está implementado en los 2))
+    model = GNN(num_clases=dataset.num_classes, tipo_gnn=args.model, num_capas=args.layers, dim_repr_nodo=args.hidden_dim, metodo_agregacion=args.aggregation, drop_ratio=args.dropout, graph_pooling=args.pooling, usar_residual=args.residual,  usar_batch_norm=args.batch_norm, ratio=args.ratio, epsilon=args.eps)
     model = model.to(device)
 
     # Configuración de optimizador y criterio de pérdida
-    optimizador = optim.Adam(model.parameters(), lr=LR) # Se puede poner como variable el learning rate
+    optimizador = optim.Adam(model.parameters(), lr=args.lr) # Se puede poner como variable el learning rate
     criterio = torch.nn.CrossEntropyLoss() # CrossEntropyLoss es para clasificación multiclase
 
     # Entrenamiento y evaluación
     accuracy_validation = []
     accuracy_test = []
     best_valid_score = 0
-    paciencia = 30  # Número máximo de épocas sin mejora
+    best_test_score = 0
+    paciencia = args.patience  # Número máximo de épocas sin mejora
     epochs_sin_mejora = 0
     parar = False
     start_time = datetime.now()
-    for epoch in range(1, 61):  # Nº epochs fijado a 100 pero se puede cambiar
+    for epoch in range(1, args.epochs + 1):  # Nº epochs fijado a 100 pero se puede cambiar
         loss = train(model, train_loader, optimizador, criterio, device)
         print(f'Epoca {epoch}, Pérdida de entrenamiento: {loss:.4f}')
 
@@ -99,15 +176,17 @@ def main():
         test_result = evaluate(model, test_loader, evaluator, device)
         accuracy_test.append(test_result['acc'])
         print(f'Resultados finales en test: {test_result}')
-        last_test_score = test_result['acc']
+        if test_result['acc'] > best_test_score:
+            best_test_score = test_result['acc']
         loss_final = loss
         if (parar==True): break
     end_time = datetime.now()
     tiempo_total = str(timedelta(seconds=(end_time - start_time).seconds))
-    plot_learning_curve(accuracy_validation, accuracy_test, last_test_score, best_valid_score, loss_final, tiempo_total)
+    plot_learning_curve(accuracy_validation, accuracy_test, best_test_score, best_valid_score, loss_final, tiempo_total, args)
 
-def plot_learning_curve(accuracy_validation, accuracy_test, last_test_score, best_valid_score, loss_final, tiempo_total):
+def plot_learning_curve(accuracy_validation, accuracy_test, best_test_score, best_valid_score, loss_final, tiempo_total, args):
     epochs = range(1, len(accuracy_validation) + 1)
+    args = args
 
     # Graficar la precisión de validación y prueba
     plt.figure(figsize=(10, 5))
@@ -126,8 +205,7 @@ def plot_learning_curve(accuracy_validation, accuracy_test, last_test_score, bes
     # Guardar la gráfica
     if not os.path.exists("img"):
         os.makedirs("img") 
-    nombre_archivo = f'img/curvas_precision_{hora_actual}_lr{LR}_drop{DR}_layers{NC}_dim{ReprNodo}_maxtest{last_test_score:.3f}_maxval{best_valid_score:.4f}_loss{loss_final}_{tiempo_total}.png'
-    # Reemplazar los dos puntos ':' por un guion '-'
+    nombre_archivo = f'img/curvas_precision_{hora_actual}_lr{args.lr}_drop{args.dropout}_layers{args.layers}_dim{args.hidden_dim}_maxtest{best_test_score:.3f}_maxval{best_valid_score:.4f}_loss{loss_final}_{tiempo_total}.png'
     nombre_archivo = re.sub(r':', '-', nombre_archivo)
     plt.savefig(nombre_archivo)
     plt.show()
