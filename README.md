@@ -51,11 +51,48 @@ To account for variability between runs, the following results are reported as t
 
 ## ⚙️ Installation
 
-```bash
-pip install -r requirements.txt
-```
-For showing graphs
-```bash
-pip install matplotlib
+### Requirements
 
+- Python 3.10  
+- CUDA 12.4 (optional, for GPU support)
+
+---
+
+### 1. **Clone the repository (if you don’t have it already):**
+```bash
+git clone https://github.com/Markel15/ogb-project.git
+```
+```bash
+cd ogb-project/src
+```
+### 2. Create a virtual environment (Python 3.10):
+```bash
+python -m venv .venv
+```
+### 3. Activate the virtual environment:
+- Windows:
+```bash
+.venv\Scripts\activate
+```
+- Linux / macOS:
+```bash
+source .venv/bin/activate
+```
+### 4. Upgrade pip inside the virtual environment:
+```bash
+python -m pip install --upgrade pip
+```
+### 5. Install PyTorch with CUDA 12.4:
+```bash
+pip install torch==2.5.1+cu124 torchvision==0.20.1+cu124 torchaudio==2.5.1 --extra-index-url https://download.pytorch.org/whl/cu124
+```
+### 6. Install the remaining project dependencies:
+```bash
+pip install -r requirements.txt --no-deps
+```
+
+## Use example:
+```bash
+python main.py --model gin --layers 4 --hidden_dim 200 --epochs 60 --eps 0.01 --batch_norm
+```
 
